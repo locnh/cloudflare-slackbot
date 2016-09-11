@@ -76,7 +76,7 @@ prevents deployments of apps without it.
 
 ### Credit
 
-This bot was forked from [ian-kent](https://github.com/ian-kent/cachebot) and rewritten with [cloudflare-go](https://github.com/cloudflare/cloudflare-go).
+This bot was forked from [ian-kent/cachebot](https://github.com/ian-kent/cachebot) and rewritten with [cloudflare/cloudflare-go](https://github.com/cloudflare/cloudflare-go).
 I also removed BASE_URI, URI_SUFFIX and used full URLs of files to be cleared from CF Cache, that means we actually can clean cache for subdomain and don't be limited inside the `CF Zone`
 
 ### License
