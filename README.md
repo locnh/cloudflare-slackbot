@@ -3,7 +3,7 @@ CloudFlare Slack Bot
 
 A [Slack](https://slack.com/) bot for [CloudFlare](https://www.cloudflare.com/).
 
-![Screenshot of cachebot](screenshot.png)
+![Screenshot](https://raw.githubusercontent.com/locnh/cloudflare-slackbot/master/screenshot.png)
 
 ### Configuration
 
