@@ -25,7 +25,7 @@ Choose one of the ways below:
 1. Use pre-compiled for Mac OS X / Linux (amd64)
 
   ```
-  bin/cachebot_<os>_amd64 -cloudflare-email CF-EMAIL -cloudflare-token CF-API-TOKEN -slack-token SLACK-TOKEN -cloudflare-zone example.com -restricted-channels SLACK-CHANNEL -authorised-users SLACK-USER
+  $ bin/cachebot_<os>_amd64 -cloudflare-email CF-EMAIL -cloudflare-token CF-API-TOKEN -slack-token SLACK-TOKEN -cloudflare-zone example.com -restricted-channels SLACK-CHANNEL -authorised-users SLACK-USER
   ```
 
 2. Compile and run by yourself
