@@ -1,18 +1,15 @@
 package main
 
 import (
-	"bytes"
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"log"
-	"net/http"
 	"os"
 	"regexp"
 	"strings"
 	"sync"
 	"time"
 
+	"github.com/cloudflare/cloudflare-go"
 	"github.com/ian-kent/gofigure"
 	"github.com/nlopes/slack"
 )
@@ -25,27 +22,12 @@ type config struct {
 	CloudflareEmail    string   `env:"CF_EMAIL"`
 	CloudflareZone     string   `env:"CF_ZONE"`
 	SlackToken         string   `env:"SLACK_TOKEN"`
-	URLBases           []string `env:"URL_BASES"`
-	URLSuffixes        []string `env:"URL_SUFFIXES"`
 	RestrictedChannels []string `env:"RESTRICTED_CHANNELS"`
 	AuthorisedUsers    []string `env:"AUTHORISED_USERS"`
 }
 
 type cacheClearInput struct {
 	URI string `json:"uri,omitempty"`
-}
-
-type cloudflareRequest struct {
-	PurgeEverything bool     `json:"purge_everything,omitempty"`
-	Files           []string `json:"files,omitempty"`
-}
-
-type cloudflareResponse struct {
-	Success bool `json:"success"`
-	// these definitions might be wrong
-	Errors   []interface{}          `json:"errors"`
-	Messages []interface{}          `json:"messages"`
-	Result   map[string]interface{} `json:"result"`
 }
 
 type cacheClearPending struct {
@@ -64,6 +46,8 @@ var helpMessage = "Here's some examples of how to clear the cache:\n`clear cache
 var cacheQueue = make(chan cacheClearPending, 10)
 var wg sync.WaitGroup
 var cfg = config{}
+
+var cfZoneId = ""
 
 var api *slack.Client
 var botUserID string
@@ -117,72 +101,35 @@ func cacheDeleter() {
 	}
 }
 
-func filesFromURI(uri string) (res []string) {
-	uri = strings.TrimSuffix(uri, ",") // supports "clear cache for a, b and c"
-	if !strings.HasPrefix(uri, "/") {
-		uri = "/" + uri
-	}
-	for _, b := range cfg.URLBases {
-		uri = strings.TrimPrefix(uri, b)
-	}
-	for _, b := range cfg.URLBases {
-		res = append(res, b+uri)
-		for _, suffix := range cfg.URLSuffixes {
-			if !strings.HasSuffix(uri, "/") {
-				res = append(res, b+uri+"/"+suffix)
-			} else {
-				res = append(res, b+uri+suffix)
-			}
-		}
-	}
-	return
-}
-
 func (c cacheClearPending) do() error {
-	var cfReq cloudflareRequest
+	api, _ := cloudflare.New(cfg.CloudflareToken, cfg.CloudflareEmail)
+
+	if cfZoneId == "" {
+		cfZoneId, _ = api.ZoneIDByName(cfg.CloudflareZone)
+		fmt.Println(cfZoneId)
+	}
 
 	if c.Everything {
 		log.Println("cacheClearPending [do]: Clearing everything")
-		cfReq.PurgeEverything = true
+		res, err := api.PurgeEverything(cfZoneId)
+		fmt.Printf("CF Response: %+v", res)
+		if err != nil {
+			log.Printf("CF Error: %+v\n", err.Error())
+		}
 	} else {
 		log.Printf("cacheClearPending [do]: Clearing %d files\n", len(c.URIs))
-		cfReq.Files = c.URIs
-	}
+		pcr := cloudflare.PurgeCacheRequest{
+			Everything: false,
+			Files:      c.URIs,
+		}
 
-	b, err := json.Marshal(&cfReq)
-	if err != nil {
-		return fmt.Errorf("Error preparing request for CloudFlare: %s", err)
-	}
+		fmt.Printf("%+v\n", pcr)
 
-	cfR, err := http.NewRequest("DELETE", "https://api.cloudflare.com/client/v4/zones/"+cfg.CloudflareZone+"/purge_cache", bytes.NewReader(b))
-	if err != nil {
-		return fmt.Errorf("Error creating request for CloudFlare: %s", err)
-	}
-
-	cfR.Header.Set("X-Auth-Email", cfg.CloudflareEmail)
-	cfR.Header.Set("X-Auth-Key", cfg.CloudflareToken)
-	cfR.Header.Set("Content-Type", "application/json")
-
-	res, err := http.DefaultClient.Do(cfR)
-	if err != nil {
-		return fmt.Errorf("Error sending request to CloudFlare: %s", err)
-	}
-
-	defer res.Body.Close()
-	b, err = ioutil.ReadAll(res.Body)
-	if err != nil {
-		return fmt.Errorf("Error reading response from CloudFlare: %s", err)
-	}
-
-	var cfRes cloudflareResponse
-	err = json.Unmarshal(b, &cfRes)
-	if err != nil {
-		return fmt.Errorf("Error parsing response from CloudFlare: %s", err)
-	}
-
-	if !cfRes.Success {
-		log.Printf("%+v\n", cfRes)
-		return fmt.Errorf("CloudFlare returned an unsuccessful response")
+		res, err := api.PurgeCache(cfZoneId, pcr)
+		fmt.Printf("CF Response: %+v", res)
+		if err != nil {
+			log.Printf("CF Error: %+v\n", err.Error())
+		}
 	}
 
 	log.Println("cacheClearPending [do]: Completed without errors")
@@ -231,13 +178,13 @@ Loop:
 	for {
 		select {
 		case msg := <-rtm.IncomingEvents:
-			fmt.Print("Event Received: ")
+			//fmt.Print("Event Received: ")
 			switch ev := msg.Data.(type) {
 			case *slack.HelloEvent:
 				// Ignore hello
 			case *slack.ConnectedEvent:
-				fmt.Println("Infos:", ev.Info)
-				fmt.Println("Connection counter:", ev.ConnectionCount)
+				// fmt.Println("Infos:", ev.Info)
+				// fmt.Println("Connection counter:", ev.ConnectionCount)
 
 			case *slack.MessageEvent:
 				// ignore cachebot user
@@ -245,7 +192,7 @@ Loop:
 					continue
 				}
 
-				fmt.Printf("Message: %v\n", ev)
+				fmt.Printf("Message: %+v\n", ev)
 
 				var restricted bool
 				for _, r := range restrictedChannels {
@@ -254,6 +201,7 @@ Loop:
 						break
 					}
 				}
+
 				var authorised bool
 				for _, a := range authorisedUsers {
 					if a == ev.User {
@@ -286,7 +234,7 @@ Loop:
 					continue
 				}
 
-				re := regexp.MustCompile("(?:https?:\\/\\/[^\\/]+)?(\\/[^\\s>]*)")
+				re := regexp.MustCompile("https?:\\/\\/[a-z0-9./]+")
 				if strings.Contains(ev.Text, "clear cache") {
 					m := re.FindAllStringSubmatch(ev.Text, -1)
 					fmt.Printf("Matches: %+v\n", m)
@@ -298,11 +246,9 @@ Loop:
 					}
 
 					var uris []string
-					for _, match := range m {
-						if len(match) > 1 {
-							fmt.Printf("Clearing cache: %s\n", match[1])
-							uris = append(uris, filesFromURI(match[1])...)
-						}
+					for _, uri := range m {
+						fmt.Printf("Clearing cache: %s\n", uri)
+						uris = append(uris, uri...)
 					}
 
 					if len(uris) > 30 {
@@ -313,7 +259,7 @@ Loop:
 					f := strings.Join(uris, "`\n`")
 					f = "`" + f + "`"
 					api.PostMessage(ev.Channel, "<@"+ev.User+"> I'm about to clear the following cache items, are you sure?\n"+f, slack.PostMessageParameters{AsUser: true})
-					clearPending[ev.User] = cacheClearPending{Everything: true, Created: time.Now(), URIs: uris, User: ev.User, Channel: ev.Channel}
+					clearPending[ev.User] = cacheClearPending{Everything: false, Created: time.Now(), URIs: uris, User: ev.User, Channel: ev.Channel}
 					continue
 				}
 
@@ -333,7 +279,7 @@ Loop:
 			default:
 
 				// Ignore other events..
-				fmt.Printf("Unexpected: %v\n", msg.Data)
+				//fmt.Printf("Unexpected: %v\n", msg.Data)
 			}
 		}
 	}

@@ -1,4 +1,4 @@
-cachebot
+CF Cache Bot
 ========
 
 A [Slack](https://slack.com/) bot for [CloudFlare](https://www.cloudflare.com/).
@@ -17,8 +17,26 @@ Configure cachebot using environment variables:
 | CF_ZONE              | CloudFlare Zone ID
 | RESTRICTED_CHANNELS  | Channels which require an authorised user
 | SLACK_TOKEN          | Slack API token
-| URL_BASES            | Base URL(s), comma separated
-| URL_SUFFIXES         | URL suffixes, comma separated
+
+### How to start
+
+1. Mac OS X
+
+  ```
+  ./cachebot_osx_amd64 -cloudflare-email CF-EMAIL  -cloudflare-token CF-API-TOKEN -restricted-channels SLACK-CHANNEL -slack-token SLACK-TOKEN -authorised-users SLACK-USER -cloudflare-zone example.com
+  ```
+
+2. Linux amd64
+
+  ```
+  ./cachebot_linux_amd64 -cloudflare-email CF-EMAIL  -cloudflare-token CF-API-TOKEN -restricted-channels SLACK-CHANNEL -slack-token SLACK-TOKEN -authorised-users SLACK-USER -cloudflare-zone example.com
+  ```
+
+3. Docker
+
+  ```
+  TBD
+  ```
 
 ### Usage
 
@@ -54,6 +72,6 @@ prevents deployments of apps without it.
 
 ### License
 
-Copyright ©‎ 2016, Ian Kent (http://iankent.uk).
+This repo was forked from https://github.com/ian-kent/cachebot
 
 Released under MIT license, see [LICENSE](LICENSE.md) for details.
