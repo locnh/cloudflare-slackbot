@@ -20,16 +20,18 @@ Configure cachebot using environment variables:
 
 ### How to start
 
-1. Mac OS X
+Choose one of the ways below:
+
+1. Use pre-compiled for Mac OS X / Linux (amd64)
 
   ```
-  ./cachebot_osx_amd64 -cloudflare-email CF-EMAIL  -cloudflare-token CF-API-TOKEN -restricted-channels SLACK-CHANNEL -slack-token SLACK-TOKEN -authorised-users SLACK-USER -cloudflare-zone example.com
+  ./cachebot_<os>_amd64 -cloudflare-email CF-EMAIL  -cloudflare-token CF-API-TOKEN -slack-token SLACK-TOKEN -cloudflare-zone example.com -restricted-channels SLACK-CHANNEL -authorised-users SLACK-USER
   ```
 
-2. Linux amd64
+2. Compiled and run by yourself
 
   ```
-  ./cachebot_linux_amd64 -cloudflare-email CF-EMAIL  -cloudflare-token CF-API-TOKEN -restricted-channels SLACK-CHANNEL -slack-token SLACK-TOKEN -authorised-users SLACK-USER -cloudflare-zone example.com
+  $ make
   ```
 
 3. Docker
@@ -70,8 +72,11 @@ If you deploy to Elastic Beanstalk, you'll need to add an `EXPOSE` line to
 the Dockerfile. Cachebot doesn't listen on any ports, but Elastic Beanstalk
 prevents deployments of apps without it.
 
-### License
+### Credit
 
-This repo was forked from https://github.com/ian-kent/cachebot
+This bot was forked from [ian-kent](https://github.com/ian-kent/cachebot) and rewritten with [cloudflare-go](https://github.com/cloudflare/cloudflare-go).
+I also removed BASE_URI, URI_SUFFIX and used full URLs of files to be cleared from CF Cache, that means we actually can clean cache for subdomain and don't be limited inside the `CF Zone`
+
+### License
 
 Released under MIT license, see [LICENSE](LICENSE.md) for details.
