@@ -25,19 +25,21 @@ Choose one of the ways below:
 1. Use pre-compiled for Mac OS X / Linux (amd64)
 
   ```
-  ./cachebot_<os>_amd64 -cloudflare-email CF-EMAIL  -cloudflare-token CF-API-TOKEN -slack-token SLACK-TOKEN -cloudflare-zone example.com -restricted-channels SLACK-CHANNEL -authorised-users SLACK-USER
+  bin/cachebot_<os>_amd64 -cloudflare-email CF-EMAIL -cloudflare-token CF-API-TOKEN -slack-token SLACK-TOKEN -cloudflare-zone example.com -restricted-channels SLACK-CHANNEL -authorised-users SLACK-USER
   ```
 
-2. Compiled and run by yourself
+2. Compile and run by yourself
 
   ```
   $ make
+  $ cachebot_<os>_amd64 -cloudflare-email CF-EMAIL -cloudflare-token CF-API-TOKEN -slack-token SLACK-TOKEN -cloudflare-zone example.com -restricted-channels SLACK-CHANNEL -authorised-users SLACK-USER
   ```
 
 3. Docker
 
   ```
-  TBD
+  $ docker pull locnh/cloudflare-slackbot
+  $ docker run --name cfslackbot -e CF_EMAIL=<cf-email> -e CF_TOKEN=<cf-token> -e SLACK_TOKEN=<slack-token> -e CF_ZONE=example.com -e RESTRICTED_CHANNELS=<slack-channels> -e AUTHORISED_USERS=<slack-users> -d locnh/cloudflare-slackbot
   ```
 
 ### Usage

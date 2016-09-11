@@ -1,6 +1,6 @@
 FROM alpine
 
-ADD cachebot_linux_amd64 /
+ADD bin/cachebot_linux_amd64 /
 
 RUN apk --update upgrade && \
     apk add curl ca-certificates && \
