@@ -1,4 +1,4 @@
-CF Cache Bot
+CloudFlare Slack Bot
 ========
 
 A [Slack](https://slack.com/) bot for [CloudFlare](https://www.cloudflare.com/).
