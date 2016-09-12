@@ -41,13 +41,13 @@ type cacheClearPending struct {
 var clearPending = make(map[string]cacheClearPending)
 var clearWaiting []cacheClearPending
 
-var helpMessage = "Here's some examples of how to clear the cache:\n`clear cache`\n`clear cache for /some/uri`\n`clear cache for /some/uri and /another/uri`\nIf I ask you to confirm, reply with `yes` or `no`!"
+var helpMessage = "Here's some examples of how to clear the cache:\n`clear cache`\n`clear cache url1 url2 url3`\nIf I ask you to confirm, reply with `yes` or `no`!"
 
 var cacheQueue = make(chan cacheClearPending, 10)
 var wg sync.WaitGroup
 var cfg = config{}
 
-var cfZoneId = ""
+var cfZoneID = ""
 
 var api *slack.Client
 var botUserID string
@@ -104,14 +104,14 @@ func cacheDeleter() {
 func (c cacheClearPending) do() error {
 	api, _ := cloudflare.New(cfg.CloudflareToken, cfg.CloudflareEmail)
 
-	if cfZoneId == "" {
-		cfZoneId, _ = api.ZoneIDByName(cfg.CloudflareZone)
-		fmt.Println(cfZoneId)
+	if cfZoneID == "" {
+		cfZoneID, _ = api.ZoneIDByName(cfg.CloudflareZone)
+		fmt.Println(cfZoneID)
 	}
 
 	if c.Everything {
 		log.Println("cacheClearPending [do]: Clearing everything")
-		res, err := api.PurgeEverything(cfZoneId)
+		res, err := api.PurgeEverything(cfZoneID)
 		fmt.Printf("CF Response: %+v", res)
 		if err != nil {
 			log.Printf("CF Error: %+v\n", err.Error())
@@ -125,7 +125,7 @@ func (c cacheClearPending) do() error {
 
 		fmt.Printf("%+v\n", pcr)
 
-		res, err := api.PurgeCache(cfZoneId, pcr)
+		res, err := api.PurgeCache(cfZoneID, pcr)
 		fmt.Printf("CF Response: %+v", res)
 		if err != nil {
 			log.Printf("CF Error: %+v\n", err.Error())
@@ -194,10 +194,10 @@ Loop:
 
 				fmt.Printf("Message: %+v\n", ev)
 
-				var restricted bool
+				var channelIsAllowed bool
 				for _, r := range restrictedChannels {
 					if r == ev.Channel {
-						restricted = true
+						channelIsAllowed = true
 						break
 					}
 				}
@@ -210,8 +210,8 @@ Loop:
 					}
 				}
 
-				if restricted && !authorised {
-					api.PostMessage(ev.Channel, "<@"+ev.User+"> Sorry, cachebot is restricted to authorised users", slack.PostMessageParameters{AsUser: true})
+				if !channelIsAllowed || !authorised {
+					api.PostMessage(ev.Channel, "<@"+ev.User+"> Sorry, I'm not allowed to talk to you here :thinking_face:", slack.PostMessageParameters{AsUser: true})
 					continue
 				}
 

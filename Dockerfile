@@ -1,6 +1,6 @@
 FROM alpine
 
-ADD bin/cachebot_linux_amd64 /
+ADD bin/cf_bot_linux_amd64 /
 
 RUN apk --update upgrade && \
     apk add curl ca-certificates && \
@@ -9,4 +9,4 @@ RUN apk --update upgrade && \
 
 EXPOSE 8080
 
-CMD /cachebot_linux_amd64
+CMD /cf_bot_linux_amd64
