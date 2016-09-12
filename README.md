@@ -52,7 +52,7 @@ Choose one of the ways below:
 
 ### Authorised users / restricted channels
 
-The bot only works in `RESTRICTED_CHANNELS` and only allowed messages from authorised users.
+The bot only works in `RESTRICTED_CHANNELS` and only allows messages from `AUTHORISED_USERS`.
 
 Example:
 
@@ -60,7 +60,7 @@ Example:
 # Only 'foo' and 'bar' users can talk to the bot in the 'support' channel.
 # cachebot works as normal in all other channels.
 AUTHORISED_USERS=foo,bar
-RESTRICTED_CHANNELS=support
+RESTRICTED_CHANNELS=support,cloudflare
 ```
 
 ### Elastic Beanstalk
