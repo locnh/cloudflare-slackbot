@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"regexp"
@@ -73,14 +72,14 @@ func cacheDeleter() {
 	for {
 		select {
 		case <-t.C:
-			fmt.Println("tick")
+			//fmt.Println("tick")
 			if len(clearWaiting) > 0 {
-				fmt.Println("found items in waiting")
+				log.Println("Found items in waiting")
 				for _, v := range clearWaiting {
 					err := v.do()
 					if err != nil {
 						log.Printf("cacheDeleter: Error received: %s\n", err.Error())
-						api.PostMessage(v.Channel, "<@"+v.User+"> Sorry, that didn't work...\n*Error*: "+err.Error(), slack.PostMessageParameters{AsUser: true})
+						api.PostMessage(v.Channel, "<@"+v.User+"> Sorry, failed to process your command :thunder_cloud_and_rain:", slack.PostMessageParameters{AsUser: true})
 						continue
 					}
 					log.Println("cacheDeleter: 'do' completed without errors")
@@ -95,7 +94,7 @@ func cacheDeleter() {
 				clearWaiting = make([]cacheClearPending, 0)
 			}
 		case q := <-cacheQueue:
-			fmt.Println("adding item to clearWaiting queue")
+			log.Println("Adding item to clearWaiting queue")
 			clearWaiting = append(clearWaiting, q)
 		}
 	}
@@ -106,15 +105,15 @@ func (c cacheClearPending) do() error {
 
 	if cfZoneID == "" {
 		cfZoneID, _ = api.ZoneIDByName(cfg.CloudflareZone)
-		fmt.Println(cfZoneID)
 	}
 
 	if c.Everything {
 		log.Println("cacheClearPending [do]: Clearing everything")
 		res, err := api.PurgeEverything(cfZoneID)
-		fmt.Printf("CF Response: %+v", res)
+		log.Printf("CF Response: %+v\n", res)
 		if err != nil {
 			log.Printf("CF Error: %+v\n", err.Error())
+			return err
 		}
 	} else {
 		log.Printf("cacheClearPending [do]: Clearing %d files\n", len(c.URIs))
@@ -123,12 +122,13 @@ func (c cacheClearPending) do() error {
 			Files:      c.URIs,
 		}
 
-		fmt.Printf("%+v\n", pcr)
+		log.Printf("\n%+v", pcr)
 
 		res, err := api.PurgeCache(cfZoneID, pcr)
-		fmt.Printf("CF Response: %+v", res)
+		log.Printf("CF Response: %+v\n", res)
 		if err != nil {
 			log.Printf("CF Error: %+v\n", err.Error())
+			return err
 		}
 	}
 
@@ -165,7 +165,7 @@ func slackBot() {
 		}
 	}
 
-	u, err := api.GetUsers()
+	u, _ := api.GetUsers()
 	for _, user := range u {
 		for _, a := range cfg.AuthorisedUsers {
 			if user.Name == a {
@@ -192,7 +192,7 @@ Loop:
 					continue
 				}
 
-				fmt.Printf("Message: %+v\n", ev)
+				log.Printf("Message: %+v\n", ev)
 
 				var channelIsAllowed bool
 				for _, r := range restrictedChannels {
@@ -210,15 +210,11 @@ Loop:
 					}
 				}
 
-				if !channelIsAllowed || !authorised {
-					api.PostMessage(ev.Channel, "<@"+ev.User+"> Sorry, I'm not allowed to talk to you here :thinking_face:", slack.PostMessageParameters{AsUser: true})
-					continue
-				}
-
 				switch strings.ToLower(ev.Text) {
 				case "help":
 					api.PostMessage(ev.Channel, "<@"+ev.User+"> "+helpMessage, slack.PostMessageParameters{AsUser: true})
 					continue
+
 				case "yes":
 					if _, ok := clearPending[ev.User]; ok {
 						api.PostMessage(ev.Channel, "<@"+ev.User+"> Ok, I'll let you know when it's done.", slack.PostMessageParameters{AsUser: true})
@@ -226,6 +222,7 @@ Loop:
 						delete(clearPending, ev.User)
 					}
 					continue
+
 				case "no":
 					if _, ok := clearPending[ev.User]; ok {
 						api.PostMessage(ev.Channel, "<@"+ev.User+"> Ok, I'll cancel that!", slack.PostMessageParameters{AsUser: true})
@@ -236,8 +233,18 @@ Loop:
 
 				re := regexp.MustCompile("https?:\\/\\/[a-z0-9./]+")
 				if strings.Contains(ev.Text, "clear cache") {
+					if !authorised {
+						api.PostMessage(ev.Channel, "<@"+ev.User+"> Sorry pal, you are not authorised to command :triumph:", slack.PostMessageParameters{AsUser: true})
+						continue
+					}
+
+					if !channelIsAllowed {
+						api.PostMessage(ev.Channel, "<@"+ev.User+"> Sorry, I'm not allowed to talk to you here :thinking_face:", slack.PostMessageParameters{AsUser: true})
+						continue
+					}
+
 					m := re.FindAllStringSubmatch(ev.Text, -1)
-					fmt.Printf("Matches: %+v\n", m)
+					log.Printf("Matches: %+v\n", m)
 
 					if len(m) == 0 {
 						api.PostMessage(ev.Channel, "<@"+ev.User+"> I'm about to clear the entire cache, are you sure?\n*Warning*: This will cause a spike in traffic to the production environment!", slack.PostMessageParameters{AsUser: true})
@@ -247,7 +254,7 @@ Loop:
 
 					var uris []string
 					for _, uri := range m {
-						fmt.Printf("Clearing cache: %s\n", uri)
+						log.Printf("Clearing cache: %s\n", uri)
 						uris = append(uris, uri...)
 					}
 
@@ -264,22 +271,22 @@ Loop:
 				}
 
 			case *slack.PresenceChangeEvent:
-				fmt.Printf("Presence Change: %v\n", ev)
+				log.Printf("Presence Change: %v\n", ev)
 
 			case *slack.LatencyReport:
-				fmt.Printf("Current latency: %v\n", ev.Value)
+				log.Printf("Current latency: %v\n", ev.Value)
 
 			case *slack.RTMError:
-				fmt.Printf("Error: %s\n", ev.Error())
+				log.Printf("Error: %s\n", ev.Error())
 
 			case *slack.InvalidAuthEvent:
-				fmt.Printf("Invalid credentials")
+				log.Printf("Invalid credentials")
 				break Loop
 
 			default:
 
 				// Ignore other events..
-				//fmt.Printf("Unexpected: %v\n", msg.Data)
+				//fmt.Printf("Unexpected: %v", msg.Data)
 			}
 		}
 	}
